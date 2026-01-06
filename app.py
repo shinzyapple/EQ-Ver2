@@ -3,6 +3,7 @@ import numpy as np
 import soundfile as sf
 from scipy.signal import get_window, lfilter
 import io
+import json
 
 # =========================
 # 1/3オクターブ中心周波数
@@ -56,7 +57,7 @@ def band_energy(freq, mag, center_freq):
     return np.mean(mag[idx] * weights)
 
 # =========================
-# EQ解析（整数出力）
+# EQ解析（整数dB）
 # =========================
 def analyze(sig_a, sig_b, sr):
     freq_a, mag_a = compute_fft(sig_a, sr)
@@ -70,8 +71,7 @@ def analyze(sig_a, sig_b, sr):
         diff = 20 * np.log10((eb + 1e-9) / (ea + 1e-9))
         diff = np.clip(diff, -30, 30)
 
-        # ★ 整数化（四捨五入）
-        eq[int(band)] = int(round(diff))
+        eq[int(round(band))] = int(round(diff))
 
     return eq
 
@@ -111,8 +111,8 @@ def apply_eq(signal, sr, eq):
 st.title("1/3 Octave EQ Analyzer（整数EQ版）")
 st.caption("EQ出力は -30〜+30 dB の整数値")
 
-file_a = st.file_uploader("音声ファイルA", type=["wav", "flac", "aiff"])
-file_b = st.file_uploader("音声ファイルB", type=["wav", "flac", "aiff"])
+file_a = st.file_uploader("音声ファイルA（基準）", type=["wav", "flac", "aiff"])
+file_b = st.file_uploader("音声ファイルB（比較）", type=["wav", "flac", "aiff"])
 
 if file_a and file_b:
     sig_a, sr_a = load_audio(file_a)
@@ -126,9 +126,28 @@ if file_a and file_b:
 
             st.subheader("1/3オクターブ EQ設定（dB・整数）")
             st.code(
-                "\n".join([f"{band:>6} Hz : {gain:+d} dB" for band, gain in eq.items()])
+                "\n".join(
+                    [f"{band:>6} Hz : {gain:+d} dB" for band, gain in eq.items()]
+                )
             )
 
+            # ===== JSON出力 =====
+            eq_json = {
+                "type": "1_3_octave_eq",
+                "sample_rate": sr_a,
+                "bands": eq
+            }
+
+            json_str = json.dumps(eq_json, indent=2, ensure_ascii=False)
+
+            st.download_button(
+                "EQ設定（JSON）をダウンロード",
+                json_str,
+                file_name="eq_setting.json",
+                mime="application/json"
+            )
+
+            # ===== WAV出力 =====
             processed = apply_eq(sig_a, sr_a, eq)
 
             buf = io.BytesIO()
