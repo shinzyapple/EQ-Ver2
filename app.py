@@ -131,23 +131,38 @@ if file_a and file_b:
                 )
             )
 
-            # ===== JSON出力 =====
+            # =========================
+            # プリセット名入力
+            # =========================
+            preset_name = st.text_input(
+                "EQプリセット名を入力してください",
+                value="My_EQ_Preset"
+            )
+
+            # =========================
+            # JSON出力
+            # =========================
             eq_json = {
                 "type": "1_3_octave_eq",
+                "name": preset_name,
                 "sample_rate": sr_a,
                 "bands": eq
             }
 
             json_str = json.dumps(eq_json, indent=2, ensure_ascii=False)
 
+            safe_name = preset_name.replace(" ", "_")
+
             st.download_button(
                 "EQ設定（JSON）をダウンロード",
                 json_str,
-                file_name="eq_setting.json",
+                file_name=f"{safe_name}.json",
                 mime="application/json"
             )
 
-            # ===== WAV出力 =====
+            # =========================
+            # WAV出力
+            # =========================
             processed = apply_eq(sig_a, sr_a, eq)
 
             buf = io.BytesIO()
@@ -156,6 +171,6 @@ if file_a and file_b:
             st.download_button(
                 "EQ適用後の音声をダウンロード",
                 buf.getvalue(),
-                file_name="eq_result.wav",
+                file_name=f"{safe_name}_result.wav",
                 mime="audio/wav"
             )
